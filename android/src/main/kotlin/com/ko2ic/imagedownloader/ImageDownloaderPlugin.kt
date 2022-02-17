@@ -56,7 +56,7 @@ class ImageDownloaderPlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         private const val LOGGER_TAG = "image_downloader"
     }
 
-    private lateinit var channel: MethodChannel
+    private var channel: MethodChannel? = null;
     private lateinit var permissionListener: ImageDownloaderPermissionListener
     private lateinit var pluginBinding: FlutterPlugin.FlutterPluginBinding
 
@@ -102,7 +102,7 @@ class ImageDownloaderPlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     ) {
         this.applicationContext = applicationContext
         channel = MethodChannel(messenger, CHANNEL)
-        channel.setMethodCallHandler(this)
+        channel?.setMethodCallHandler(this)
         permissionListener = ImageDownloaderPermissionListener(activity)
 
         if (registrar != null) {
@@ -117,7 +117,7 @@ class ImageDownloaderPlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
     private fun tearDown() {
         activityBinding?.removeRequestPermissionsResultListener(permissionListener)
-        channel.setMethodCallHandler(null)
+        channel?.setMethodCallHandler(null);
         applicationContext = null
     }
 
@@ -129,9 +129,17 @@ class ImageDownloaderPlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         when (call.method) {
             "downloadImage" -> {
                 inPublicDir = call.argument<Boolean>("inPublicDir") ?: true
-
+                val channelMethod = channel;
                 val permissionCallback =
-                    applicationContext?.let { CallbackImpl(call, result, channel, it) }
+                    if (channelMethod != null) applicationContext?.let {
+                        CallbackImpl(
+                            call,
+                            result,
+                            channelMethod,
+                            it
+                        )
+                    } else null;
+
                 this.callback = permissionCallback
                 if (inPublicDir) {
                     this.permissionListener.callback = permissionCallback
